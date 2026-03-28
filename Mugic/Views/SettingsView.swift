@@ -2,34 +2,18 @@ import SwiftUI
 
 // MARK: - Settings View
 struct SettingsView: View {
-    @State private var crossfadeEnabled = true
-    @State private var audioQuality = "Lossless"
-    @State private var theme = "Dark"
-
-    private let qualityOptions = ["Low", "Normal", "High", "Lossless"]
+    @Environment(SettingsViewModel.self) private var settings
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 40) {
-                // Header
                 headerSection
-
-                // Account
                 accountSection
-
-                // Playback
                 playbackSection
-
-                // Library
                 librarySection
-
-                // Display
                 displaySection
-
-                // About
                 aboutSection
 
-                // Footer
                 Text("MADE WITH SOUL IN THE VOID")
                     .font(.system(size: 10, weight: .medium))
                     .tracking(3)
@@ -47,7 +31,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Settings")
                 .font(.system(size: 34, weight: .heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
                 .tracking(-0.5)
 
             Text("Personalize your kinetic gallery experience.")
@@ -63,7 +47,6 @@ struct SettingsView: View {
 
             VStack(spacing: 16) {
                 HStack(spacing: 20) {
-                    // Profile pic placeholder
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(
@@ -83,7 +66,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Alex Rivera")
                             .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.sonicOnSurface)
 
                         Text("alex.sonic@kinetic.audio")
                             .font(.system(size: 14))
@@ -112,12 +95,10 @@ struct SettingsView: View {
                     Spacer()
                 }
 
-                Button {
-                    // Edit profile
-                } label: {
+                Button { } label: {
                     Text("Edit Profile")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.sonicOnPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Color.sonicPrimary)
@@ -136,12 +117,11 @@ struct SettingsView: View {
             sectionHeader(icon: "play.circle.fill", title: "PLAYBACK")
 
             VStack(spacing: 0) {
-                // Crossfade toggle
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Crossfade")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.sonicOnSurface)
 
                         Text("Seamlessly transition between tracks")
                             .font(.system(size: 14))
@@ -150,45 +130,50 @@ struct SettingsView: View {
 
                     Spacer()
 
-                    Toggle("", isOn: $crossfadeEnabled)
-                        .tint(Color.sonicPrimary)
-                        .labelsHidden()
+                    Toggle("", isOn: Binding(
+                        get: { settings.crossfadeEnabled },
+                        set: { settings.crossfadeEnabled = $0 }
+                    ))
+                    .tint(Color.sonicPrimary)
+                    .labelsHidden()
                 }
                 .padding(24)
 
                 Divider()
-                    .background(.white.opacity(0.05))
+                    .background(.sonicOnSurface.opacity(0.05))
 
-                // Audio quality
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("Audio Quality")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.sonicOnSurface)
 
                         Spacer()
 
-                        Text("Lossless (Hi-Fi)")
+                        Text(qualityLabel)
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(Color.sonicPrimary)
                     }
 
                     HStack(spacing: 8) {
-                        ForEach(qualityOptions, id: \.self) { quality in
+                        ForEach(settings.qualityOptions, id: \.self) { quality in
                             Button {
-                                audioQuality = quality
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    settings.audioQuality = quality
+                                }
+                                HapticService.selection()
                             } label: {
                                 Text(quality)
-                                    .font(.system(size: 14, weight: audioQuality == quality ? .bold : .medium))
+                                    .font(.system(size: 14, weight: settings.audioQuality == quality ? .bold : .medium))
                                     .foregroundStyle(
-                                        audioQuality == quality
+                                        settings.audioQuality == quality
                                             ? Color.sonicOnPrimaryFixed
                                             : Color.sonicOnSurfaceVariant
                                     )
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
                                     .background(
-                                        audioQuality == quality
+                                        settings.audioQuality == quality
                                             ? Color.sonicPrimary
                                             : Color.sonicSurfaceBright
                                     )
@@ -204,32 +189,37 @@ struct SettingsView: View {
         }
     }
 
+    private var qualityLabel: String {
+        switch settings.audioQuality {
+        case "Lossless": return "Lossless (Hi-Fi)"
+        case "High": return "High (320kbps)"
+        case "Normal": return "Normal (128kbps)"
+        case "Low": return "Low (64kbps)"
+        default: return settings.audioQuality
+        }
+    }
+
     // MARK: - Library Section
     private var librarySection: some View {
         VStack(alignment: .leading, spacing: 20) {
             sectionHeader(icon: "music.note.house.fill", title: "LIBRARY")
 
             VStack(spacing: 24) {
-                // Storage info
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Storage Info")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.sonicOnSurface)
 
                         Spacer()
 
                         HStack(spacing: 4) {
-                            Text("42.5 GB")
+                            Text("Cache: \(settings.cacheSize)")
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.white)
-                            Text("used of 128 GB")
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.sonicOnSurfaceVariant)
+                                .foregroundStyle(.sonicOnSurface)
                         }
                     }
 
-                    // Progress bar
                     GeometryReader { geo in
                         HStack(spacing: 0) {
                             Rectangle()
@@ -246,7 +236,6 @@ struct SettingsView: View {
                     }
                     .frame(height: 8)
 
-                    // Legend
                     HStack(spacing: 20) {
                         legendItem(color: .sonicPrimary, label: "Downloads")
                         legendItem(color: .sonicTertiary, label: "Cache")
@@ -254,9 +243,27 @@ struct SettingsView: View {
                     }
                 }
 
-                // Action buttons
                 HStack(spacing: 12) {
-                    settingsActionButton(icon: "trash", title: "Clear Cache")
+                    Button {
+                        settings.clearCache()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 14))
+                            Text("Clear Cache")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .foregroundStyle(.sonicOnSurface)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.sonicSurfaceBright)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.sonicOutlineVariant.opacity(0.2), lineWidth: 1)
+                        )
+                    }
+
                     settingsActionButton(icon: "arrow.down.circle", title: "Downloads")
                 }
             }
@@ -274,24 +281,32 @@ struct SettingsView: View {
             VStack(spacing: 16) {
                 Text("Theme Preference")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 16) {
-                    // Light theme
                     themeOption(
                         title: "Light Mode",
-                        isSelected: theme == "Light",
+                        isSelected: settings.themePreference == "Light",
                         backgroundColor: Color(hex: "f5f5f5"),
-                        action: { theme = "Light" }
+                        action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                settings.themePreference = "Light"
+                            }
+                            HapticService.medium()
+                        }
                     )
 
-                    // Dark theme
                     themeOption(
                         title: "Dark Mode",
-                        isSelected: theme == "Dark",
-                        backgroundColor: Color.sonicBackground,
-                        action: { theme = "Dark" }
+                        isSelected: settings.themePreference == "Dark",
+                        backgroundColor: Color(hex: "1a1a1a"),
+                        action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                settings.themePreference = "Dark"
+                            }
+                            HapticService.medium()
+                        }
                     )
                 }
             }
@@ -350,7 +365,7 @@ struct SettingsView: View {
                 Text(title)
                     .font(.system(size: 14, weight: .bold))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(.sonicOnSurface)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(Color.sonicSurfaceBright)
@@ -395,7 +410,7 @@ struct SettingsView: View {
         HStack {
             Text(title)
                 .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
             Spacer()
             Text(value)
                 .font(.system(size: 16))
@@ -406,11 +421,11 @@ struct SettingsView: View {
 
     private func aboutChevronRow(title: String) -> some View {
         VStack(spacing: 0) {
-            Divider().background(.white.opacity(0.05))
+            Divider().background(.sonicOnSurface.opacity(0.05))
             HStack {
                 Text(title)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14))

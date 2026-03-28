@@ -1,7 +1,7 @@
 import SwiftUI
+import AVFoundation
 
 // MARK: - Song Row
-// Reusable track list item used in Home, Playlist, Search, Queue views
 struct SongRow: View {
     let song: Song
     let showDuration: Bool
@@ -16,16 +16,14 @@ struct SongRow: View {
     var body: some View {
         Button(action: { onTap?() }) {
             HStack(spacing: 12) {
-                // Album art thumbnail
-                artworkView
+                SongArtwork(artworkName: song.artworkName, size: 56, fileURL: song.fileURL)
                     .frame(width: 56, height: 56)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                // Song info
                 VStack(alignment: .leading, spacing: 2) {
                     Text(song.title)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.sonicOnSurface)
                         .lineLimit(1)
 
                     Text(song.artist)
@@ -48,33 +46,41 @@ struct SongRow: View {
         }
         .buttonStyle(.plain)
     }
-
-    @ViewBuilder
-    private var artworkView: some View {
-        // Placeholder gradient artwork
-        SongArtwork(artworkName: song.artworkName, size: 56)
-    }
 }
 
 // MARK: - Song Artwork
-// Generates a deterministic gradient from the artwork name as placeholder
 struct SongArtwork: View {
     let artworkName: String
     let size: CGFloat
+    var fileURL: URL? = nil
+
+    @State private var loadedImage: Image?
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: gradientColors(for: artworkName),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Image(systemName: "music.note")
-                .font(.system(size: size * 0.3))
-                .foregroundStyle(.white.opacity(0.4))
+            if let loadedImage {
+                loadedImage
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+            } else {
+                LinearGradient(
+                    colors: gradientColors(for: artworkName),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Image(systemName: "music.note")
+                    .font(.system(size: size * 0.3))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size > 100 ? 16 : 8))
+        .task(id: fileURL) {
+            if let fileURL {
+                loadedImage = await Self.loadArtwork(from: fileURL)
+            }
+        }
     }
 
     private func gradientColors(for name: String) -> [Color] {
@@ -91,10 +97,29 @@ struct SongArtwork: View {
         ]
         return palettes[hash % palettes.count]
     }
+
+    static func loadArtwork(from url: URL) async -> Image? {
+        let asset = AVURLAsset(url: url)
+        guard let metadata = try? await asset.load(.metadata) else { return nil }
+        for item in metadata {
+            if item.commonKey == .commonKeyArtwork,
+               let data = try? await item.load(.dataValue) {
+                #if canImport(UIKit)
+                if let uiImage = UIImage(data: data) {
+                    return Image(uiImage: uiImage)
+                }
+                #elseif canImport(AppKit)
+                if let nsImage = NSImage(data: data) {
+                    return Image(nsImage: nsImage)
+                }
+                #endif
+            }
+        }
+        return nil
+    }
 }
 
 // MARK: - Album Card
-// Horizontal scrolling album card used in Recently Played
 struct AlbumCard: View {
     let album: Album
     var onTap: (() -> Void)? = nil
@@ -106,7 +131,7 @@ struct AlbumCard: View {
 
                 Text(album.title)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .lineLimit(1)
 
                 Text(album.artist)
@@ -121,23 +146,24 @@ struct AlbumCard: View {
 }
 
 // MARK: - Mini Player Bar
-// Floating glassmorphism now-playing bar
 struct MiniPlayerBar: View {
     @Environment(PlayerViewModel.self) private var player
 
     var body: some View {
         if let song = player.currentSong, player.showMiniPlayer {
             Button {
-                player.showNowPlaying = true
+                withAnimation(.spring(duration: 0.3)) {
+                    player.showNowPlaying = true
+                }
             } label: {
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
-                        SongArtwork(artworkName: song.artworkName, size: 48)
+                        SongArtwork(artworkName: song.artworkName, size: 48, fileURL: song.fileURL)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(song.title)
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.sonicOnSurface)
                                 .lineLimit(1)
                             Text(song.artist)
                                 .font(.system(size: 12))
@@ -150,33 +176,33 @@ struct MiniPlayerBar: View {
                             Button { player.skipPrevious() } label: {
                                 Image(systemName: "backward.fill")
                                     .font(.system(size: 16))
-                                    .foregroundStyle(.white.opacity(0.6))
+                                    .foregroundStyle(.sonicOnSurface.opacity(0.6))
                             }
 
                             Button { player.togglePlayPause() } label: {
                                 Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
                                     .font(.system(size: 18))
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(.sonicOnPrimary)
                                     .frame(width: 40, height: 40)
                                     .background(Color.sonicPrimary)
                                     .clipShape(Circle())
                                     .shadow(color: Color.sonicPrimary.opacity(0.4), radius: 8)
+                                    .contentTransition(.symbolEffect(.replace))
                             }
 
                             Button { player.skipNext() } label: {
                                 Image(systemName: "forward.fill")
                                     .font(.system(size: 16))
-                                    .foregroundStyle(.white.opacity(0.6))
+                                    .foregroundStyle(.sonicOnSurface.opacity(0.6))
                             }
                         }
                     }
                     .padding(12)
 
-                    // Progress bar
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Rectangle()
-                                .fill(.white.opacity(0.1))
+                                .fill(.sonicOnSurface.opacity(0.1))
                             Rectangle()
                                 .fill(Color.sonicPrimary)
                                 .frame(width: geo.size.width * player.progress)
@@ -190,7 +216,7 @@ struct MiniPlayerBar: View {
                         .fill(.ultraThinMaterial)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.sonicSurfaceVariant.opacity(0.6))
+                                .fill(Color.sonicGlassTint.opacity(0.6))
                         )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -198,6 +224,7 @@ struct MiniPlayerBar: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 }
@@ -216,7 +243,7 @@ struct QuickAccessTile: View {
 
             Text(item.title)
                 .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
                 .lineLimit(2)
         }
         .padding(20)
@@ -242,12 +269,12 @@ struct QueueItemRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            SongArtwork(artworkName: song.artworkName, size: 48)
+            SongArtwork(artworkName: song.artworkName, size: 48, fileURL: song.fileURL)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(song.title)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .lineLimit(1)
                 Text(song.artist)
                     .font(.system(size: 12))
@@ -269,5 +296,99 @@ struct QueueItemRow: View {
         .padding(12)
         .background(Color.clear)
         .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Add to Playlist Sheet
+struct AddToPlaylistSheet: View {
+    @Environment(LibraryViewModel.self) private var library
+    @Environment(\.dismiss) private var dismiss
+    let song: Song
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if library.playlists.isEmpty {
+                    Text("No playlists yet")
+                        .foregroundStyle(Color.sonicOnSurfaceVariant)
+                } else {
+                    ForEach(library.playlists) { playlist in
+                        Button {
+                            library.addSongToPlaylist(song, playlist: playlist)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 12) {
+                                SongArtwork(artworkName: playlist.artworkName, size: 44)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(playlist.name)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.sonicOnSurface)
+                                    Text("\(playlist.trackCount) tracks")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.sonicOnSurfaceVariant)
+                                }
+
+                                Spacer()
+
+                                if playlist.songs.contains(where: { $0.id == song.id }) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color.sonicPrimary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .navigationTitle("Add to Playlist")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .background(Color.sonicBackground)
+        }
+    }
+}
+
+// MARK: - Create Playlist Sheet
+struct CreatePlaylistSheet: View {
+    @Environment(LibraryViewModel.self) private var library
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var description = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Playlist Name") {
+                    TextField("Enter name", text: $name)
+                }
+                Section("Description") {
+                    TextField("Enter description", text: $description)
+                }
+            }
+            .navigationTitle("New Playlist")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                        library.createPlaylist(name: name, description: description)
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
     }
 }

@@ -3,32 +3,27 @@ import SwiftUI
 // MARK: - Home View
 struct HomeView: View {
     @Environment(PlayerViewModel.self) private var player
+    @Environment(LibraryViewModel.self) private var library
     @State private var searchText = ""
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                // Welcome Section
                 welcomeSection
                     .padding(.bottom, 32)
 
-                // Search Bar
                 searchBar
                     .padding(.bottom, 40)
 
-                // Quick Access Bento Grid
                 quickAccessSection
                     .padding(.bottom, 48)
 
-                // Recently Played
                 recentlyPlayedSection
                     .padding(.bottom, 48)
 
-                // Recommended Mixes
                 recommendedMixesSection
                     .padding(.bottom, 48)
 
-                // Favorite Tracks
                 favoriteTracksSection
                     .padding(.bottom, 120)
             }
@@ -40,14 +35,23 @@ struct HomeView: View {
     // MARK: - Welcome
     private var welcomeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Good Evening, Julian")
+            Text(greetingText)
                 .font(.system(size: 34, weight: .heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
                 .tracking(-0.5)
 
             Text("Ready for your nightly rhythm?")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(Color.sonicOnSurfaceVariant)
+        }
+    }
+
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "Good Morning"
+        case 12..<17: return "Good Afternoon"
+        default: return "Good Evening"
         }
     }
 
@@ -60,7 +64,7 @@ struct HomeView: View {
 
             TextField("Artists, songs, or podcasts", text: $searchText)
                 .font(.system(size: 16))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
         }
         .padding(18)
         .background(Color.sonicSurfaceContainer)
@@ -70,11 +74,9 @@ struct HomeView: View {
     // MARK: - Quick Access Bento Grid
     private var quickAccessSection: some View {
         VStack(spacing: 12) {
-            // Hero card
             heroCard
                 .frame(height: 200)
 
-            // 2x2 grid of quick items
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(SampleData.quickAccessItems) { item in
                     QuickAccessTile(item: item)
@@ -92,7 +94,6 @@ struct HomeView: View {
                 endPoint: .bottomTrailing
             )
 
-            // Decorative blur circle
             Circle()
                 .fill(.white.opacity(0.1))
                 .frame(width: 180, height: 180)
@@ -111,8 +112,9 @@ struct HomeView: View {
             }
             .padding(28)
 
-            // Play button
-            Button { } label: {
+            Button {
+                player.shufflePlay(SampleData.songs.prefix(10).map { $0 })
+            } label: {
                 Image(systemName: "play.fill")
                     .font(.system(size: 18))
                     .foregroundStyle(.white)
@@ -132,7 +134,7 @@ struct HomeView: View {
             HStack {
                 Text("Recently Played")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
 
                 Spacer()
 
@@ -144,7 +146,11 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 24) {
                     ForEach(SampleData.recentAlbums) { album in
-                        AlbumCard(album: album)
+                        AlbumCard(album: album) {
+                            if !album.songs.isEmpty {
+                                player.playPlaylist(album.songs)
+                            }
+                        }
                     }
                 }
             }
@@ -156,15 +162,20 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Recommended Mixes")
                 .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
 
             VStack(spacing: 16) {
-                ForEach(SampleData.playlists.prefix(2)) { playlist in
+                ForEach(library.playlists.prefix(2)) { playlist in
                     mixCard(
                         title: playlist.name,
                         subtitle: playlist.description,
                         artwork: playlist.artworkName
                     )
+                    .onTapGesture {
+                        if !playlist.songs.isEmpty {
+                            player.playPlaylist(playlist.songs)
+                        }
+                    }
                 }
             }
         }
@@ -172,14 +183,12 @@ struct HomeView: View {
 
     private func mixCard(title: String, subtitle: String, artwork: String) -> some View {
         ZStack(alignment: .bottomLeading) {
-            // Background gradient
             LinearGradient(
                 colors: gradientColors(for: artwork),
                 startPoint: .topTrailing,
                 endPoint: .bottomLeading
             )
 
-            // Overlay gradient
             LinearGradient(
                 colors: [.clear, .black.opacity(0.4), .black.opacity(0.9)],
                 startPoint: .top,
@@ -206,12 +215,30 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Favorite Tracks")
                 .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
 
-            LazyVStack(spacing: 4) {
-                ForEach(SampleData.favoriteTracks) { song in
-                    SongRow(song: song) {
-                        player.playSong(song)
+            if library.favoriteSongs.isEmpty {
+                Text("No favorites yet — tap the heart on any song")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.sonicOnSurfaceVariant)
+                    .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 4) {
+                    ForEach(library.favoriteSongs.prefix(8)) { song in
+                        HStack(spacing: 0) {
+                            SongRow(song: song) {
+                                player.playSong(song)
+                            }
+
+                            Button {
+                                library.toggleFavorite(song)
+                            } label: {
+                                Image(systemName: "heart.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(Color.sonicTertiary)
+                            }
+                            .padding(.trailing, 8)
+                        }
                     }
                 }
             }

@@ -7,17 +7,14 @@ struct QueueView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                // Header
                 headerSection
                     .padding(.horizontal, 24)
                     .padding(.bottom, 32)
 
-                // Currently Playing
                 nowPlayingCard
                     .padding(.horizontal, 24)
                     .padding(.bottom, 32)
 
-                // Queue list
                 queueList
                     .padding(.horizontal, 24)
                     .padding(.bottom, 120)
@@ -37,7 +34,7 @@ struct QueueView: View {
 
                 Text("Up Next")
                     .font(.system(size: 40, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .tracking(-1)
             }
 
@@ -66,18 +63,18 @@ struct QueueView: View {
         Group {
             if let song = player.currentSong {
                 HStack(spacing: 16) {
-                    // Album art with equalizer overlay
                     ZStack {
-                        SongArtwork(artworkName: song.artworkName, size: 72)
+                        SongArtwork(artworkName: song.artworkName, size: 72, fileURL: song.fileURL)
                             .shadow(color: .black.opacity(0.5), radius: 12)
 
-                        // Equalizer icon overlay
                         Image(systemName: "waveform")
                             .font(.system(size: 24))
                             .foregroundStyle(Color.sonicPrimary)
                             .frame(width: 72, height: 72)
                             .background(.black.opacity(0.4))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .opacity(player.isPlaying ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.3), value: player.isPlaying)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -88,7 +85,7 @@ struct QueueView: View {
 
                         Text(song.title)
                             .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.sonicOnSurface)
                             .lineLimit(1)
 
                         Text("\(song.artist) • \(song.album)")
@@ -117,23 +114,42 @@ struct QueueView: View {
         }
     }
 
-    // MARK: - Queue List
+    // MARK: - Queue List (Reorderable)
     private var queueList: some View {
-        LazyVStack(spacing: 4) {
-            ForEach(Array(player.queue.enumerated()), id: \.element.id) { index, song in
-                QueueItemRow(song: song) {
-                    player.removeFromQueue(at: index)
-                }
-                .onTapGesture {
-                    player.playSong(song)
-                    player.removeFromQueue(at: index)
-                }
-            }
-
+        VStack(spacing: 4) {
             if player.queue.isEmpty {
                 emptyState
+            } else {
+                ForEach(Array(player.queue.enumerated()), id: \.element.id) { index, song in
+                    QueueItemRow(song: song) {
+                        player.removeFromQueue(at: index)
+                    }
+                    .onTapGesture {
+                        let idx = index
+                        player.playSong(song)
+                        player.removeFromQueue(at: idx)
+                    }
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .slide),
+                        removal: .opacity.combined(with: .move(edge: .trailing))
+                    ))
+                    .contextMenu {
+                        Button {
+                            player.playSong(song)
+                            player.removeFromQueue(at: index)
+                        } label: {
+                            Label("Play Now", systemImage: "play.fill")
+                        }
+                        Button(role: .destructive) {
+                            player.removeFromQueue(at: index)
+                        } label: {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    }
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: player.queue.count)
     }
 
     // MARK: - Empty State

@@ -3,44 +3,41 @@ import SwiftUI
 // MARK: - Now Playing View
 struct NowPlayingView: View {
     @Environment(PlayerViewModel.self) private var player
+    @Environment(LibraryViewModel.self) private var library
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
-            // Blurred background
             backgroundLayer
 
-            // Content
             VStack(spacing: 0) {
-                // Top bar
                 topBar
                     .padding(.horizontal, 24)
                     .padding(.top, 16)
 
                 Spacer()
 
-                // Hero album art
                 albumArtSection
                     .padding(.horizontal, 24)
 
                 Spacer()
 
-                // Song metadata
                 metadataSection
                     .padding(.horizontal, 24)
                     .padding(.bottom, 32)
 
-                // Progress bar
                 progressSection
                     .padding(.horizontal, 24)
                     .padding(.bottom, 24)
 
-                // Playback controls
                 controlsSection
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
+
+                volumeSection
                     .padding(.horizontal, 24)
                     .padding(.bottom, 32)
 
-                // Lyrics sheet trigger
                 lyricsButton
                     .padding(.horizontal, 24)
                     .padding(.bottom, 40)
@@ -53,7 +50,7 @@ struct NowPlayingView: View {
     private var backgroundLayer: some View {
         ZStack {
             if let song = player.currentSong {
-                SongArtwork(artworkName: song.artworkName, size: 500)
+                SongArtwork(artworkName: song.artworkName, size: 500, fileURL: song.fileURL)
                     .opacity(0.3)
                     .blur(radius: 100)
                     .scaleEffect(1.1)
@@ -77,7 +74,7 @@ struct NowPlayingView: View {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .frame(width: 40, height: 40)
             }
 
@@ -99,7 +96,7 @@ struct NowPlayingView: View {
             Button { } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .frame(width: 40, height: 40)
             }
         }
@@ -109,8 +106,10 @@ struct NowPlayingView: View {
     private var albumArtSection: some View {
         Group {
             if let song = player.currentSong {
-                SongArtwork(artworkName: song.artworkName, size: 320)
+                SongArtwork(artworkName: song.artworkName, size: 320, fileURL: song.fileURL)
                     .shadow(color: .black.opacity(0.5), radius: 30, y: 15)
+                    .scaleEffect(player.isPlaying ? 1.0 : 0.92)
+                    .animation(.spring(duration: 0.5), value: player.isPlaying)
             }
         }
     }
@@ -121,7 +120,7 @@ struct NowPlayingView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(player.currentSong?.title ?? "")
                     .font(.system(size: 28, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .tracking(-0.5)
 
                 Text(player.currentSong?.artist ?? "")
@@ -138,13 +137,24 @@ struct NowPlayingView: View {
             Spacer()
 
             HStack(spacing: 16) {
-                Button { } label: {
-                    Image(systemName: "heart")
+                // Favorite toggle
+                Button {
+                    if let song = player.currentSong {
+                        library.toggleFavorite(song)
+                    }
+                } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .font(.system(size: 24))
-                        .foregroundStyle(Color.sonicOnSurfaceVariant)
+                        .foregroundStyle(isFavorite ? Color.sonicTertiary : Color.sonicOnSurfaceVariant)
+                        .contentTransition(.symbolEffect(.replace))
                 }
 
-                Button { } label: {
+                // Add to playlist
+                Button {
+                    if let song = player.currentSong {
+                        library.songToAddToPlaylist = song
+                    }
+                } label: {
                     Image(systemName: "text.badge.plus")
                         .font(.system(size: 24))
                         .foregroundStyle(Color.sonicOnSurfaceVariant)
@@ -153,10 +163,14 @@ struct NowPlayingView: View {
         }
     }
 
-    // MARK: - Progress
+    private var isFavorite: Bool {
+        guard let song = player.currentSong else { return false }
+        return library.isFavorite(song)
+    }
+
+    // MARK: - Progress (Seek Bar)
     private var progressSection: some View {
         VStack(spacing: 8) {
-            // Seek bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
@@ -173,11 +187,32 @@ struct NowPlayingView: View {
                         )
                         .frame(width: geo.size.width * player.progress, height: 4)
                         .shadow(color: Color.sonicPrimary.opacity(0.4), radius: 8)
-                }
-            }
-            .frame(height: 4)
 
-            // Time labels
+                    // Thumb indicator
+                    Circle()
+                        .fill(Color.sonicPrimary)
+                        .frame(width: player.isSeeking ? 16 : 0, height: player.isSeeking ? 16 : 0)
+                        .offset(x: max(0, geo.size.width * player.progress - 8))
+                        .shadow(color: Color.sonicPrimary.opacity(0.4), radius: 4)
+                        .animation(.easeOut(duration: 0.15), value: player.isSeeking)
+                }
+                .frame(height: 16)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            if !player.isSeeking { player.beginSeeking() }
+                            let pct = value.location.x / geo.size.width
+                            player.updateSeek(to: pct)
+                        }
+                        .onEnded { _ in
+                            player.endSeeking()
+                            HapticService.light()
+                        }
+                )
+            }
+            .frame(height: 16)
+
             HStack {
                 Text(player.currentTimeString)
                     .font(.system(size: 11, weight: .medium))
@@ -197,7 +232,6 @@ struct NowPlayingView: View {
     // MARK: - Controls
     private var controlsSection: some View {
         HStack {
-            // Shuffle
             Button { player.toggleShuffle() } label: {
                 Image(systemName: "shuffle")
                     .font(.system(size: 20))
@@ -207,35 +241,34 @@ struct NowPlayingView: View {
             Spacer()
 
             HStack(spacing: 32) {
-                // Previous
                 Button { player.skipPrevious() } label: {
                     Image(systemName: "backward.fill")
                         .font(.system(size: 30))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.sonicOnSurface)
                 }
 
-                // Play/Pause
                 Button { player.togglePlayPause() } label: {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 36))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.sonicOnPrimary)
                         .frame(width: 72, height: 72)
                         .background(Color.sonicPrimary)
                         .clipShape(Circle())
                         .shadow(color: Color.sonicPrimary.opacity(0.3), radius: 20, y: 10)
+                        .contentTransition(.symbolEffect(.replace))
+                        .scaleEffect(player.isPlaying ? 1.0 : 0.95)
+                        .animation(.spring(duration: 0.3), value: player.isPlaying)
                 }
 
-                // Next
                 Button { player.skipNext() } label: {
                     Image(systemName: "forward.fill")
                         .font(.system(size: 30))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.sonicOnSurface)
                 }
             }
 
             Spacer()
 
-            // Repeat
             Button { player.cycleRepeatMode() } label: {
                 Image(systemName: repeatIcon)
                     .font(.system(size: 20))
@@ -249,6 +282,41 @@ struct NowPlayingView: View {
         case .off: return "repeat"
         case .all: return "repeat"
         case .one: return "repeat.1"
+        }
+    }
+
+    // MARK: - Volume
+    private var volumeSection: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "speaker.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.sonicOnSurfaceVariant)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.sonicSurfaceContainerHighest)
+                        .frame(height: 4)
+
+                    Capsule()
+                        .fill(Color.sonicPrimary)
+                        .frame(width: geo.size.width * player.volume, height: 4)
+                }
+                .frame(height: 16)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            let pct = max(0, min(1, value.location.x / geo.size.width))
+                            player.setVolume(pct)
+                        }
+                )
+            }
+            .frame(height: 16)
+
+            Image(systemName: "speaker.wave.3.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.sonicOnSurfaceVariant)
         }
     }
 
@@ -268,7 +336,7 @@ struct NowPlayingView: View {
                     Text("LYRICS")
                         .font(.system(size: 14, weight: .bold))
                         .tracking(1)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.sonicOnSurface)
                 }
 
                 Spacer()
@@ -282,7 +350,7 @@ struct NowPlayingView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.05), lineWidth: 1)
+                    .stroke(.sonicOnSurface.opacity(0.05), lineWidth: 1)
             )
         }
     }

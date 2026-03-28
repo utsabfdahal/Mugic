@@ -1,17 +1,17 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Main Tab View
-// Root navigation container with bottom tab bar, mini player, and now playing sheet
 struct MainTabView: View {
+    @Environment(PlayerViewModel.self) private var player
+    @Environment(LibraryViewModel.self) private var library
+    @Environment(SettingsViewModel.self) private var settings
     @State private var selectedTab: Tab = .home
-    @State private var player = PlayerViewModel()
 
     enum Tab: String, CaseIterable {
         case home, search, library, settings
 
-        var title: String {
-            rawValue.capitalized
-        }
+        var title: String { rawValue.capitalized }
 
         var icon: String {
             switch self {
@@ -25,7 +25,6 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Main content
             NavigationStack {
                 Group {
                     switch selectedTab {
@@ -58,20 +57,16 @@ struct MainTabView: View {
                 .toolbarBackground(.visible, for: .navigationBar)
                 #endif
                 .navigationDestination(for: Playlist.self) { playlist in
-                    PlaylistView(playlist: playlist)
+                    PlaylistView(playlistID: playlist.id)
                 }
             }
 
-            // Mini player floating bar
             VStack(spacing: 0) {
                 MiniPlayerBar()
                     .padding(.bottom, 8)
-
-                // Tab bar
                 tabBar
             }
         }
-        .environment(player)
         #if os(iOS)
         .fullScreenCover(isPresented: Binding(
             get: { player.showNowPlaying },
@@ -79,6 +74,8 @@ struct MainTabView: View {
         )) {
             NowPlayingView()
                 .environment(player)
+                .environment(library)
+                .environment(settings)
         }
         #else
         .sheet(isPresented: Binding(
@@ -87,15 +84,44 @@ struct MainTabView: View {
         )) {
             NowPlayingView()
                 .environment(player)
+                .environment(library)
+                .environment(settings)
         }
         #endif
-        .preferredColorScheme(.dark)
+        .sheet(isPresented: Binding(
+            get: { library.showCreatePlaylist },
+            set: { library.showCreatePlaylist = $0 }
+        )) {
+            CreatePlaylistSheet()
+        }
+        .sheet(item: Binding(
+            get: { library.songToAddToPlaylist },
+            set: { library.songToAddToPlaylist = $0 }
+        )) { song in
+            AddToPlaylistSheet(song: song)
+        }
+        .fileImporter(
+            isPresented: Binding(
+                get: { library.showImportMusic },
+                set: { library.showImportMusic = $0 }
+            ),
+            allowedContentTypes: [.audio, .mp3, .wav, .aiff],
+            allowsMultipleSelection: true
+        ) { result in
+            switch result {
+            case .success(let urls):
+                for url in urls {
+                    library.importAudioFile(from: url)
+                }
+            case .failure(let error):
+                print("Import error: \(error)")
+            }
+        }
     }
 
     // MARK: - Top Bar Logo
     private var topBarLeading: some View {
         HStack(spacing: 10) {
-            // Profile avatar placeholder
             Circle()
                 .fill(Color.sonicSurfaceVariant)
                 .frame(width: 32, height: 32)
@@ -114,7 +140,9 @@ struct MainTabView: View {
 
     private var topBarTrailing: some View {
         Button {
-            selectedTab = .settings
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedTab = .settings
+            }
         } label: {
             Image(systemName: "gearshape")
                 .font(.system(size: 18))
@@ -122,22 +150,36 @@ struct MainTabView: View {
         }
     }
 
-    // MARK: - Library View (Queue + Playlists)
+    // MARK: - Library View
     private var libraryView: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 32) {
-                // Queue section
                 QueueView()
 
-                // Playlists section
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Your Playlists")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
+                    HStack {
+                        Text("Your Playlists")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.sonicOnSurface)
+
+                        Spacer()
+
+                        Button {
+                            library.showCreatePlaylist = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 14))
+                                Text("New")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundStyle(Color.sonicPrimary)
+                        }
+                    }
+                    .padding(.horizontal, 24)
 
                     LazyVStack(spacing: 8) {
-                        ForEach(SampleData.playlists) { playlist in
+                        ForEach(library.playlists) { playlist in
                             NavigationLink(value: playlist) {
                                 playlistRow(playlist)
                             }
@@ -145,6 +187,43 @@ struct MainTabView: View {
                         }
                     }
                     .padding(.horizontal, 24)
+
+                    // Import music button
+                    Button {
+                        library.showImportMusic = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 16))
+                            Text("Import Music")
+                                .font(.system(size: 16, weight: .bold))
+                        }
+                        .foregroundStyle(.sonicOnPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.sonicPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                    .padding(.horizontal, 24)
+
+                    // Imported songs
+                    if !library.importedSongs.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Imported Songs")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.sonicOnSurface)
+                                .padding(.horizontal, 24)
+
+                            LazyVStack(spacing: 4) {
+                                ForEach(library.importedSongs) { song in
+                                    SongRow(song: song) {
+                                        player.playSong(song)
+                                    }
+                                    .padding(.horizontal, 16)
+                                }
+                            }
+                        }
+                    }
                 }
                 .padding(.bottom, 120)
             }
@@ -159,7 +238,7 @@ struct MainTabView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(playlist.name)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .lineLimit(1)
 
                 Text("\(playlist.trackCount) tracks")
@@ -182,7 +261,10 @@ struct MainTabView: View {
         HStack {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button {
-                    selectedTab = tab
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedTab = tab
+                    }
+                    HapticService.selection()
                 } label: {
                     VStack(spacing: 4) {
                         Image(systemName: tab.icon)
@@ -223,9 +305,9 @@ struct MainTabView: View {
                     topLeadingRadius: 32,
                     topTrailingRadius: 32
                 )
-                .fill(Color(hex: "171717").opacity(0.6))
+                .fill(Color.sonicGlassTint.opacity(0.6))
             )
-            .shadow(color: .white.opacity(0.05), radius: 0, y: -1)
+            .shadow(color: .sonicOnSurface.opacity(0.05), radius: 0, y: -1)
             .ignoresSafeArea()
         )
     }

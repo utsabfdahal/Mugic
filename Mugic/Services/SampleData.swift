@@ -6,6 +6,7 @@ struct SampleData {
 
     // MARK: - Songs
     static let songs: [Song] = [
+        Song(id: "0", title: "Pasoori", artist: "Ali Sethi & Shae Gill", album: "Coke Studio", duration: 260, artworkName: "album_pasoori", fileURL: Bundle.main.url(forResource: "Pasoori", withExtension: "mp3")),
         Song(id: "1", title: "Starboy", artist: "The Weeknd", album: "Starboy", duration: 230, artworkName: "album_starboy"),
         Song(id: "2", title: "Levitating", artist: "Dua Lipa", album: "Future Nostalgia", duration: 203, artworkName: "album_levitating"),
         Song(id: "3", title: "Heat Waves", artist: "Glass Animals", album: "Dreamland", duration: 238, artworkName: "album_heatwaves"),

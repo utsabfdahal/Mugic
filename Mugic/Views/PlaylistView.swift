@@ -3,26 +3,31 @@ import SwiftUI
 // MARK: - Playlist View
 struct PlaylistView: View {
     @Environment(PlayerViewModel.self) private var player
-    let playlist: Playlist
+    @Environment(LibraryViewModel.self) private var library
+    let playlistID: String
+
+    private var playlist: Playlist {
+        library.playlistForID(playlistID) ?? Playlist(id: playlistID, name: "Unknown", description: "", artworkName: "placeholder", songs: [])
+    }
+
+    @State private var showRenameAlert = false
+    @State private var renameText = ""
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                // Hero Header
                 heroHeader
                     .padding(.bottom, 32)
 
-                // Action buttons
                 actionButtons
                     .padding(.horizontal, 24)
                     .padding(.bottom, 32)
 
-                // Track count
                 trackHeader
                     .padding(.horizontal, 24)
                     .padding(.bottom, 16)
 
-                // Track list
                 trackList
                     .padding(.horizontal, 24)
                     .padding(.bottom, 120)
@@ -32,14 +37,48 @@ struct PlaylistView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button {
+                        renameText = playlist.name
+                        showRenameAlert = true
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete Playlist", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color.sonicOnSurfaceVariant)
+                }
+            }
+        }
+        .alert("Rename Playlist", isPresented: $showRenameAlert) {
+            TextField("Playlist name", text: $renameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                library.renamePlaylist(playlist, to: renameText)
+            }
+        }
+        .alert("Delete Playlist?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                library.deletePlaylist(playlist)
+            }
+        } message: {
+            Text("This action cannot be undone.")
+        }
     }
 
     // MARK: - Hero Header
     private var heroHeader: some View {
         VStack(spacing: 24) {
-            // Artwork
             ZStack {
-                // Glow
                 SongArtwork(artworkName: playlist.artworkName, size: 240)
                     .blur(radius: 40)
                     .opacity(0.3)
@@ -50,11 +89,10 @@ struct PlaylistView: View {
                     .rotationEffect(.degrees(1))
             }
 
-            // Playlist info
             VStack(spacing: 8) {
                 Text(playlist.name)
                     .font(.system(size: 40, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .tracking(-1)
                     .multilineTextAlignment(.center)
 
@@ -71,8 +109,8 @@ struct PlaylistView: View {
     private var actionButtons: some View {
         HStack(spacing: 16) {
             Button {
-                if let first = playlist.songs.first {
-                    player.playSong(first)
+                if !playlist.songs.isEmpty {
+                    player.playPlaylist(playlist.songs)
                 }
             } label: {
                 HStack(spacing: 8) {
@@ -81,7 +119,7 @@ struct PlaylistView: View {
                     Text("Play")
                         .font(.system(size: 16, weight: .bold))
                 }
-                .foregroundStyle(.black)
+                .foregroundStyle(.sonicOnPrimary)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 16)
                 .background(Color.sonicPrimaryGradient)
@@ -90,7 +128,7 @@ struct PlaylistView: View {
             }
 
             Button {
-                // Shuffle play
+                player.shufflePlay(playlist.songs)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "shuffle")
@@ -98,7 +136,7 @@ struct PlaylistView: View {
                     Text("Shuffle")
                         .font(.system(size: 16, weight: .semibold))
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 16)
                 .background(Color.sonicSurfaceBright)
@@ -116,12 +154,14 @@ struct PlaylistView: View {
         HStack {
             Text("\(playlist.trackCount) Tracks")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
 
             Spacer()
 
             Button {
-                // Add song
+                // Show all songs to pick from
+                library.songToAddToPlaylist = nil // reset
+                showSongPicker = true
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus")
@@ -134,15 +174,112 @@ struct PlaylistView: View {
         }
     }
 
+    @State private var showSongPicker = false
+
     // MARK: - Track List
     private var trackList: some View {
-        LazyVStack(spacing: 2) {
-            ForEach(playlist.songs) { song in
-                PlaylistTrackRow(song: song) {
-                    player.playSong(song)
+        VStack(spacing: 0) {
+            LazyVStack(spacing: 2) {
+                ForEach(playlist.songs) { song in
+                    PlaylistTrackRow(song: song) {
+                        player.playSong(song)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            withAnimation {
+                                library.removeSongFromPlaylist(song, playlist: playlist)
+                            }
+                        } label: {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    }
+                    .contextMenu {
+                        Button {
+                            player.addToQueue(song)
+                        } label: {
+                            Label("Add to Queue", systemImage: "text.badge.plus")
+                        }
+                        Button {
+                            library.toggleFavorite(song)
+                        } label: {
+                            Label(
+                                library.isFavorite(song) ? "Remove from Favorites" : "Add to Favorites",
+                                systemImage: library.isFavorite(song) ? "heart.slash" : "heart"
+                            )
+                        }
+                        Button(role: .destructive) {
+                            library.removeSongFromPlaylist(song, playlist: playlist)
+                        } label: {
+                            Label("Remove from Playlist", systemImage: "trash")
+                        }
+                    }
                 }
             }
         }
+        .sheet(isPresented: $showSongPicker) {
+            SongPickerSheet(playlistID: playlistID)
+        }
+    }
+}
+
+// MARK: - Song Picker Sheet
+struct SongPickerSheet: View {
+    @Environment(LibraryViewModel.self) private var library
+    @Environment(\.dismiss) private var dismiss
+    let playlistID: String
+    @State private var searchText = ""
+
+    private var playlist: Playlist? {
+        library.playlistForID(playlistID)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(filteredSongs) { song in
+                    Button {
+                        if let pl = playlist {
+                            library.addSongToPlaylist(song, playlist: pl)
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            SongArtwork(artworkName: song.artworkName, size: 44, fileURL: song.fileURL)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(song.title)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.sonicOnSurface)
+                                Text(song.artist)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color.sonicOnSurfaceVariant)
+                            }
+
+                            Spacer()
+
+                            if playlist?.songs.contains(where: { $0.id == song.id }) == true {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.sonicPrimary)
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .searchable(text: $searchText, prompt: "Search songs")
+            .navigationTitle("Add Songs")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var filteredSongs: [Song] {
+        library.searchSongs(query: searchText)
     }
 }
 
@@ -154,12 +291,12 @@ struct PlaylistTrackRow: View {
     var body: some View {
         Button(action: { onTap?() }) {
             HStack(spacing: 16) {
-                SongArtwork(artworkName: song.artworkName, size: 48)
+                SongArtwork(artworkName: song.artworkName, size: 48, fileURL: song.fileURL)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(song.title)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.sonicOnSurface)
                         .lineLimit(1)
 
                     Text(song.artist)

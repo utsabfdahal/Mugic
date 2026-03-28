@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Search View
 struct SearchView: View {
     @Environment(PlayerViewModel.self) private var player
+    @Environment(LibraryViewModel.self) private var library
     @State private var searchText = ""
     @State private var selectedFilter = "Recent"
     @State private var selectedTab = "Songs"
@@ -13,21 +14,17 @@ struct SearchView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                // Hero Search
                 searchSection
                     .padding(.horizontal, 24)
                     .padding(.bottom, 16)
 
-                // Filter Chips
                 filterChips
                     .padding(.bottom, 16)
 
-                // Tabs
                 tabBar
                     .padding(.horizontal, 24)
                     .padding(.bottom, 16)
 
-                // Results
                 resultsSection
                     .padding(.horizontal, 24)
                     .padding(.bottom, 120)
@@ -45,7 +42,7 @@ struct SearchView: View {
 
             TextField("Artists, songs, or podcasts", text: $searchText)
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
         }
         .padding(20)
         .background(Color.sonicSurfaceContainer)
@@ -59,7 +56,10 @@ struct SearchView: View {
             HStack(spacing: 10) {
                 ForEach(filters, id: \.self) { filter in
                     Button {
-                        selectedFilter = filter
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedFilter = filter
+                        }
+                        HapticService.selection()
                     } label: {
                         Text(filter)
                             .font(.system(size: 14, weight: .medium))
@@ -93,7 +93,10 @@ struct SearchView: View {
         HStack(spacing: 24) {
             ForEach(tabs, id: \.self) { tab in
                 Button {
-                    selectedTab = tab
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedTab = tab
+                    }
+                    HapticService.selection()
                 } label: {
                     VStack(spacing: 12) {
                         Text(tab)
@@ -129,43 +132,38 @@ struct SearchView: View {
                 songResults
             case "Artists":
                 artistResults
+            case "Albums":
+                albumResults
+            case "Playlists":
+                playlistResults
             default:
                 songResults
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: selectedTab)
     }
 
+    // MARK: - Song Results
     private var songResults: some View {
         VStack(spacing: 4) {
-            ForEach(filteredSongs) { song in
+            ForEach(library.searchSongs(query: searchText)) { song in
                 searchResultRow(song: song)
             }
 
-            // Artists section
             if !searchText.isEmpty || selectedFilter != "Recent" {
                 artistHighlight
             }
         }
     }
 
-    private var filteredSongs: [Song] {
-        if searchText.isEmpty {
-            return Array(SampleData.songs.prefix(6))
-        }
-        return SampleData.songs.filter {
-            $0.title.localizedCaseInsensitiveContains(searchText) ||
-            $0.artist.localizedCaseInsensitiveContains(searchText)
-        }
-    }
-
     private func searchResultRow(song: Song) -> some View {
         HStack(spacing: 16) {
-            SongArtwork(artworkName: song.artworkName, size: 56)
+            SongArtwork(artworkName: song.artworkName, size: 56, fileURL: song.fileURL)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(song.title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.sonicOnSurface)
                     .lineLimit(1)
 
                 Text("\(song.artist) • \(song.durationString)")
@@ -176,13 +174,18 @@ struct SearchView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 16) {
-                Button { } label: {
-                    Image(systemName: "heart")
+                Button {
+                    library.toggleFavorite(song)
+                } label: {
+                    Image(systemName: library.isFavorite(song) ? "heart.fill" : "heart")
                         .font(.system(size: 16))
-                        .foregroundStyle(Color.sonicOnSurfaceVariant)
+                        .foregroundStyle(library.isFavorite(song) ? Color.sonicTertiary : Color.sonicOnSurfaceVariant)
+                        .contentTransition(.symbolEffect(.replace))
                 }
 
-                Button { } label: {
+                Button {
+                    library.songToAddToPlaylist = song
+                } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16))
                         .foregroundStyle(Color.sonicOnSurfaceVariant)
@@ -199,8 +202,56 @@ struct SearchView: View {
     // MARK: - Artist Results
     private var artistResults: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 24) {
-            ForEach(SampleData.artists) { artist in
+            ForEach(library.searchArtists(query: searchText)) { artist in
                 artistCard(artist)
+            }
+        }
+    }
+
+    // MARK: - Album Results
+    private var albumResults: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 24) {
+            ForEach(library.searchAlbums(query: searchText)) { album in
+                AlbumCard(album: album) {
+                    player.playPlaylist(album.songs)
+                }
+            }
+        }
+    }
+
+    // MARK: - Playlist Results
+    private var playlistResults: some View {
+        LazyVStack(spacing: 8) {
+            ForEach(library.searchPlaylists(query: searchText)) { playlist in
+                HStack(spacing: 16) {
+                    SongArtwork(artworkName: playlist.artworkName, size: 56)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(playlist.name)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.sonicOnSurface)
+                            .lineLimit(1)
+
+                        Text("\(playlist.trackCount) tracks • \(playlist.description)")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sonicOnSurfaceVariant)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        if !playlist.songs.isEmpty {
+                            player.playPlaylist(playlist.songs)
+                        }
+                    } label: {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sonicPrimary)
+                    }
+                }
+                .padding(12)
+                .contentShape(Rectangle())
             }
         }
     }
@@ -209,7 +260,7 @@ struct SearchView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Top Artists")
                 .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
                 .padding(.top, 24)
 
             HStack(spacing: 24) {
@@ -242,7 +293,7 @@ struct SearchView: View {
 
             Text(artist.name)
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(.sonicOnSurface)
                 .lineLimit(1)
 
             Text(artist.genre)

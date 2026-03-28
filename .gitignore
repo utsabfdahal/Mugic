@@ -11,7 +11,7 @@ DerivedData/
 !default.mode2v3
 *.perspectivev3
 !default.perspectivev3
-xcuserdata/
+xcuserdata/``
 *.xccheckout
 *.moved-aside
 *.xcuserstate
@@ -49,6 +49,8 @@ fastlane/test_output
 
 # Design / stitch files
 stitch/
+stitchforwhitemode/
 
 # GitHub Copilot instructions
 .github/
+Pasoori.mp3
