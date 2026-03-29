@@ -5,45 +5,56 @@ struct NowPlayingView: View {
     @Environment(PlayerViewModel.self) private var player
     @Environment(LibraryViewModel.self) private var library
     @Environment(\.dismiss) private var dismiss
+    @State private var dragOffset: CGFloat = 0
 
     var body: some View {
-        ZStack {
-            backgroundLayer
-
+        ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 topBar
                     .padding(.horizontal, 24)
                     .padding(.top, 16)
-
-                Spacer()
+                    .padding(.bottom, 16)
 
                 albumArtSection
                     .padding(.horizontal, 24)
-
-                Spacer()
+                    .padding(.bottom, 20)
 
                 metadataSection
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 20)
 
                 progressSection
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 16)
 
                 controlsSection
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 16)
 
                 volumeSection
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 32)
-
-                lyricsButton
                     .padding(.horizontal, 24)
                     .padding(.bottom, 40)
             }
         }
-        .background(Color.sonicBackground)
+        .background { backgroundLayer }
+        .offset(y: dragOffset)
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    if value.translation.height > 0 {
+                        dragOffset = value.translation.height
+                    }
+                }
+                .onEnded { value in
+                    if value.translation.height > 120 {
+                        dismiss()
+                    } else {
+                        withAnimation(.spring(duration: 0.3)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
     }
 
     // MARK: - Background
@@ -106,60 +117,65 @@ struct NowPlayingView: View {
     private var albumArtSection: some View {
         Group {
             if let song = player.currentSong {
-                SongArtwork(artworkName: song.artworkName, size: 320, fileURL: song.fileURL)
+                SongArtwork(artworkName: song.artworkName, size: 260, fileURL: song.fileURL)
+                    .frame(width: 260, height: 260)
                     .shadow(color: .black.opacity(0.5), radius: 30, y: 15)
                     .scaleEffect(player.isPlaying ? 1.0 : 0.92)
                     .animation(.spring(duration: 0.5), value: player.isPlaying)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Metadata
     private var metadataSection: some View {
-        HStack(alignment: .bottom) {
+        HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(player.currentSong?.title ?? "")
-                    .font(.system(size: 28, weight: .heavy))
+                    .font(.system(size: 22, weight: .heavy))
                     .foregroundStyle(.sonicOnSurface)
                     .tracking(-0.5)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
 
                 Text(player.currentSong?.artist ?? "")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(Color.sonicPrimary)
+                    .lineLimit(1)
 
                 if let song = player.currentSong {
                     Text("Album: \(song.album)")
-                        .font(.system(size: 14))
+                        .font(.system(size: 13))
                         .foregroundStyle(Color.sonicOnSurfaceVariant)
+                        .lineLimit(1)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
             HStack(spacing: 16) {
-                // Favorite toggle
                 Button {
                     if let song = player.currentSong {
                         library.toggleFavorite(song)
                     }
                 } label: {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 24))
+                        .font(.system(size: 22))
                         .foregroundStyle(isFavorite ? Color.sonicTertiary : Color.sonicOnSurfaceVariant)
                         .contentTransition(.symbolEffect(.replace))
                 }
 
-                // Add to playlist
                 Button {
                     if let song = player.currentSong {
                         library.songToAddToPlaylist = song
                     }
                 } label: {
                     Image(systemName: "text.badge.plus")
-                        .font(.system(size: 24))
+                        .font(.system(size: 22))
                         .foregroundStyle(Color.sonicOnSurfaceVariant)
                 }
             }
+            .fixedSize()
         }
     }
 
@@ -249,9 +265,9 @@ struct NowPlayingView: View {
 
                 Button { player.togglePlayPause() } label: {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 36))
+                        .font(.system(size: 32))
                         .foregroundStyle(.sonicOnPrimary)
-                        .frame(width: 72, height: 72)
+                        .frame(width: 64, height: 64)
                         .background(Color.sonicPrimary)
                         .clipShape(Circle())
                         .shadow(color: Color.sonicPrimary.opacity(0.3), radius: 20, y: 10)
@@ -320,38 +336,12 @@ struct NowPlayingView: View {
         }
     }
 
-    // MARK: - Lyrics Button
-    private var lyricsButton: some View {
-        VStack(spacing: 12) {
-            Capsule()
-                .fill(Color.sonicSurfaceContainerHighest)
-                .frame(width: 48, height: 4)
+}
 
-            HStack {
-                HStack(spacing: 12) {
-                    Image(systemName: "text.quote")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.sonicPrimary)
 
-                    Text("LYRICS")
-                        .font(.system(size: 14, weight: .bold))
-                        .tracking(1)
-                        .foregroundStyle(.sonicOnSurface)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sonicOnSurfaceVariant)
-            }
-            .padding(20)
-            .background(Color.sonicSurfaceContainer.opacity(0.4))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.sonicOnSurface.opacity(0.05), lineWidth: 1)
-            )
-        }
-    }
+// MARK: - Preview
+#Preview {
+    NowPlayingView()
+        .environment(PlayerViewModel())
+        .environment(LibraryViewModel())
 }

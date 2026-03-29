@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sonic Splash Screen</title>
+<!-- Google Fonts: Manrope for headlines/logo, Inter for labels -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary": "#575992",
+              "on-secondary-fixed": "#13144a",
+              "on-primary-container": "#fffbff",
+              "outline-variant": "#c7c4d7",
+              "on-secondary": "#ffffff",
+              "surface-container-high": "#e8e8e8",
+              "secondary-fixed-dim": "#c0c1ff",
+              "surface-dim": "#dadada",
+              "surface-container-highest": "#e2e2e2",
+              "primary-fixed": "#e1e0ff",
+              "on-tertiary-container": "#fffbff",
+              "surface-container": "#eeeeee",
+              "primary-container": "#6063ee",
+              "surface-container-lowest": "#ffffff",
+              "outline": "#767586",
+              "tertiary-container": "#b55d00",
+              "tertiary": "#904900",
+              "primary-fixed-dim": "#c0c1ff",
+              "secondary-fixed": "#e1e0ff",
+              "on-primary-fixed-variant": "#2f2ebe",
+              "surface-tint": "#494bd6",
+              "tertiary-fixed": "#ffdcc5",
+              "background": "#f9f9f9",
+              "secondary-container": "#bdbefe",
+              "inverse-primary": "#c0c1ff",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "surface-container-low": "#f3f3f4",
+              "on-secondary-container": "#494b83",
+              "on-primary": "#ffffff",
+              "inverse-on-surface": "#f0f1f1",
+              "tertiary-fixed-dim": "#ffb783",
+              "surface-bright": "#f9f9f9",
+              "on-tertiary-fixed": "#301400",
+              "error": "#ba1a1a",
+              "primary": "#4648d4",
+              "error-container": "#ffdad6",
+              "on-primary-fixed": "#07006c",
+              "on-tertiary-fixed-variant": "#703700",
+              "surface": "#f9f9f9",
+              "on-surface": "#1a1c1c",
+              "on-background": "#1a1c1c",
+              "inverse-surface": "#2f3131",
+              "on-tertiary": "#ffffff",
+              "surface-variant": "#e2e2e2",
+              "on-surface-variant": "#464554",
+              "on-secondary-fixed-variant": "#404178"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+              "label": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- iOS Status Bar Simulation -->
+<div class="fixed top-0 left-0 w-full h-12 flex items-center justify-between px-8 z-50">
+<div class="text-sm font-semibold text-on-surface">9:41</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[18px]">wifi</span>
+<span class="material-symbols-outlined text-[20px]">battery_full</span>
+</div>
+</div>
+<!-- Main Splash Canvas -->
+<main class="relative min-h-screen w-full flex flex-col items-center justify-center bg-surface-container-lowest overflow-hidden">
+<!-- Center Content Branding -->
+<div class="flex flex-col items-center gap-6 z-10">
+<!-- App Logo Container -->
+<div class="w-32 h-32 md:w-40 md:h-40 relative flex items-center justify-center">
+<img alt="Mugic Music Player Logo" class="w-full h-full object-contain" data-alt="A minimalist high-tech music app logo featuring abstract sound wave geometry in indigo tones on a clean white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcrTqd408vbVlUmmU41hjO8r5f7VKpj8h2JLZ1pBhMmlBkWxlcnQ0N7ik-Ymlrx0Hz0pTV6F0ql45HlClBX5Wks525ASYg_m7s7Zj3NWIQVeTlmIJo793CsBTc6HrSMnSk07ZzKZ2tYBUSJJqSQTlBAc10SZuj-W5vblK0se3FfCWZUJ5-cKekProyIcxL616JIv_o4NXydQgHTnlron0t6AQojRyE-7vQROUdXH9BFELfJfS3I02dQghA61gEhdVrH08WYa0efp4"/>
+</div>
+<!-- App Name -->
+<h1 class="font-headline text-4xl md:text-5xl font-extrabold tracking-tighter text-on-surface">
+                Mugic
+            </h1>
+</div>
+<!-- Footer Attribution -->
+<div class="absolute bottom-12 left-0 w-full flex flex-col items-center gap-8">
+<!-- Loading Indicator (Subtle Native iOS Style) -->
+<div class="flex gap-1.5">
+<div class="w-1.5 h-1.5 rounded-full bg-outline-variant/30 animate-pulse"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-outline-variant/50 animate-pulse" style="animation-delay: 0.2s"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-outline-variant/30 animate-pulse" style="animation-delay: 0.4s"></div>
+</div>
+<!-- Footer Text -->
+<div class="flex flex-col items-center gap-1">
+<span class="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/60 font-medium">
+                    From
+                </span>
+<span class="font-headline text-sm font-bold tracking-tight text-primary">
+                    Utsab
+                </span>
+</div>
+</div>
+<!-- Background Aesthetic Element (Subtle Depth) -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] pointer-events-none opacity-[0.03]">
+<div class="w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary via-transparent to-transparent"></div>
+</div>
+</main>
+<!-- iOS Home Indicator Simulation -->
+<div class="fixed bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-on-surface/10 rounded-full z-50"></div>
+</body></html>

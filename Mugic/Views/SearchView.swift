@@ -197,6 +197,26 @@ struct SearchView: View {
         .onTapGesture {
             player.playSong(song)
         }
+        .contextMenu {
+            Button {
+                player.addToQueue(song)
+            } label: {
+                Label("Add to Queue", systemImage: "text.badge.plus")
+            }
+            Button {
+                library.songToAddToPlaylist = song
+            } label: {
+                Label("Add to Playlist", systemImage: "music.note.list")
+            }
+            Button {
+                library.toggleFavorite(song)
+            } label: {
+                Label(
+                    library.isFavorite(song) ? "Remove from Favorites" : "Add to Favorites",
+                    systemImage: library.isFavorite(song) ? "heart.slash" : "heart"
+                )
+            }
+        }
     }
 
     // MARK: - Artist Results

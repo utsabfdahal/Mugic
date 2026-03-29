@@ -23,10 +23,32 @@ final class AudioPlayerService: NSObject {
     #if os(iOS)
     private func configureAudioSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             print("Audio session error: \(error)")
+        }
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+    }
+
+    @objc private func handleInterruption(_ notification: Notification) {
+        guard let info = notification.userInfo,
+              let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+        if type == .ended {
+            if let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt {
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    resume()
+                }
+            }
         }
     }
     #endif
@@ -34,7 +56,20 @@ final class AudioPlayerService: NSObject {
     func play(url: URL) {
         stop()
         do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            let ext = url.pathExtension.lowercased()
+            let typeHint: AVFileType? = switch ext {
+            case "mp3": .mp3
+            case "m4a", "aac": .m4a
+            case "wav": .wav
+            case "aiff", "aif": .aiff
+            case "caf": .caf
+            default: nil
+            }
+            if let typeHint {
+                audioPlayer = try AVAudioPlayer(contentsOf: url, fileTypeHint: typeHint.rawValue)
+            } else {
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+            }
             audioPlayer?.delegate = self
             audioPlayer?.volume = volume
             audioPlayer?.prepareToPlay()
@@ -44,6 +79,7 @@ final class AudioPlayerService: NSObject {
             startProgressTimer()
         } catch {
             print("Playback error: \(error)")
+            isPlaying = false
         }
     }
 

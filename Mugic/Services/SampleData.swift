@@ -52,7 +52,7 @@ struct SampleData {
     static let quickAccessItems: [QuickAccessItem] = [
         QuickAccessItem(title: "Liked Songs", icon: "heart.fill", color: "tertiary"),
         QuickAccessItem(title: "On Repeat", icon: "clock.arrow.circlepath", color: "secondary"),
-        QuickAccessItem(title: "New Release", icon: "sparkles", color: "primary"),
+        QuickAccessItem(title: "New Release", icon: "star.fill", color: "primary"),
         QuickAccessItem(title: "Top Podcasts", icon: "antenna.radiowaves.left.and.right", color: "neutral"),
     ]
 

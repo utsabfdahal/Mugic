@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		04B9AB5E2F783F000006149B /* MugicLiveActivityExtension.appex in Embed Extensions */ = {isa = PBXBuildFile; fileRef = 04B9AB552F783F000006149B /* MugicLiveActivityExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		04B9AB5E2F783F000006149B /* MugicLiveActivityExtension.appex in Embed Extensions */ = {isa = PBXBuildFile; fileRef = 04B9AB552F783F000006149B /* MugicLiveActivityExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,31 +39,41 @@
 		04B9AB552F783F000006149B /* MugicLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MugicLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		04B9AB432F783E3B0006149B /* Mugic */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Mugic;
-			sourceTree = "<group>";
-		};
-		04B9AB562F783F000006149B /* MugicLiveActivity */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				04B9AB622F783F000006149B /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			path = MugicLiveActivity;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		04B9AB622F783F000006149B /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		04B9AB622F783F000006149B /* Exceptions for "MugicLiveActivity" folder in "MugicLiveActivityExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = 04B9AB5A2F783F000006149B /* MugicLiveActivityExtension */;
 		};
+		04B9AB632F783F010006149B /* Exceptions for "Mugic" folder in "Mugic" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 04B9AB402F783E3B0006149B /* Mugic */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		04B9AB432F783E3B0006149B /* Mugic */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				04B9AB632F783F010006149B /* Exceptions for "Mugic" folder in "Mugic" target */,
+			);
+			path = Mugic;
+			sourceTree = "<group>";
+		};
+		04B9AB562F783F000006149B /* MugicLiveActivity */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				04B9AB622F783F000006149B /* Exceptions for "MugicLiveActivity" folder in "MugicLiveActivityExtension" target */,
+			);
+			path = MugicLiveActivity;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		04B9AB3E2F783E3B0006149B /* Frameworks */ = {
@@ -225,9 +235,7 @@
 /* Begin PBXTargetDependency section */
 		04B9AB5C2F783F000006149B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 04B9AB5A2F783F000006149B /* MugicLiveActivityExtension */;
 			targetProxy = 04B9AB5B2F783F000006149B /* PBXContainerItemProxy */;
 		};
@@ -363,6 +371,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mugic/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -408,6 +417,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mugic/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

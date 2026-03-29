@@ -86,14 +86,14 @@ struct SongArtwork: View {
     private func gradientColors(for name: String) -> [Color] {
         let hash = abs(name.hashValue)
         let palettes: [[Color]] = [
-            [Color(hex: "8a4cfc"), Color(hex: "49339d")],
-            [Color(hex: "bd9dff"), Color(hex: "8a4cfc")],
-            [Color(hex: "ff8ed2"), Color(hex: "8a4cfc")],
-            [Color(hex: "6366f1"), Color(hex: "8a4cfc")],
-            [Color(hex: "a28efc"), Color(hex: "49339d")],
-            [Color(hex: "ef81c4"), Color(hex: "701455")],
-            [Color(hex: "ffa5d9"), Color(hex: "a28efc")],
-            [Color(hex: "b28cff"), Color(hex: "3c0089")],
+            [Color(hex: "e05549"), Color(hex: "7a4220")],
+            [Color(hex: "ff8a80"), Color(hex: "c43e3e")],
+            [Color(hex: "ffb74d"), Color(hex: "c43e3e")],
+            [Color(hex: "d65a5a"), Color(hex: "8b3a3a")],
+            [Color(hex: "e8a97a"), Color(hex: "7a4220")],
+            [Color(hex: "cf6655"), Color(hex: "5c1a1a")],
+            [Color(hex: "ffab91"), Color(hex: "d65a5a")],
+            [Color(hex: "ff6e6e"), Color(hex: "3b0000")],
         ]
         return palettes[hash % palettes.count]
     }

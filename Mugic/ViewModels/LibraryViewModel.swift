@@ -10,6 +10,7 @@ final class LibraryViewModel {
     // Sheet states
     var showCreatePlaylist = false
     var showImportMusic = false
+    var showImportFolder = false
     var songToAddToPlaylist: Song? = nil
 
     init() {
@@ -170,6 +171,111 @@ final class LibraryViewModel {
             $0.title.localizedCaseInsensitiveContains(query) ||
             $0.artist.localizedCaseInsensitiveContains(query) ||
             $0.album.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    // MARK: - Delete Imported Song
+    func deleteImportedSong(_ song: Song) {
+        if let fileURL = song.fileURL {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+        withAnimation(.easeOut(duration: 0.25)) {
+            importedSongs.removeAll { $0.id == song.id }
+            // Also remove from all playlists
+            for i in playlists.indices {
+                playlists[i].songs.removeAll { $0.id == song.id }
+            }
+            // Remove from favorites
+            favoriteSongIDs.remove(song.id)
+        }
+        saveImportedSongs()
+        savePlaylists()
+        saveFavorites()
+        HapticService.medium()
+    }
+
+    // MARK: - Import Folder as Playlist
+    func importFolder(from url: URL) {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+
+        let fm = FileManager.default
+        let audioExtensions: Set<String> = ["mp3", "m4a", "aac", "wav", "aiff", "aif", "caf", "flac", "alac"]
+
+        guard let contents = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) else { return }
+
+        let audioFiles = contents.filter { audioExtensions.contains($0.pathExtension.lowercased()) }
+        guard !audioFiles.isEmpty else { return }
+
+        let folderName = url.lastPathComponent
+
+        Task {
+            var importedForPlaylist: [Song] = []
+
+            for fileURL in audioFiles {
+                let destURL = PersistenceService.importedMusicDirectory.appendingPathComponent(fileURL.lastPathComponent)
+                do {
+                    if fm.fileExists(atPath: destURL.path) {
+                        try fm.removeItem(at: destURL)
+                    }
+                    try fm.copyItem(at: fileURL, to: destURL)
+
+                    let asset = AVURLAsset(url: destURL)
+                    let metadata = try? await asset.load(.metadata)
+                    let cmDuration = try? await asset.load(.duration)
+
+                    var title = fileURL.deletingPathExtension().lastPathComponent
+                    var artist = "Unknown Artist"
+                    var album = folderName
+
+                    if let metadata {
+                        for item in metadata {
+                            if let key = item.commonKey {
+                                let value = try? await item.load(.stringValue)
+                                switch key {
+                                case .commonKeyTitle: title = value ?? title
+                                case .commonKeyArtist: artist = value ?? artist
+                                case .commonKeyAlbumName: album = value ?? album
+                                default: break
+                                }
+                            }
+                        }
+                    }
+
+                    let durationSec = cmDuration.map { CMTimeGetSeconds($0) } ?? 0
+
+                    let song = Song(
+                        id: UUID().uuidString,
+                        title: title,
+                        artist: artist,
+                        album: album,
+                        duration: durationSec > 0 ? durationSec : 180,
+                        artworkName: "imported_\(title.lowercased())",
+                        fileURL: destURL
+                    )
+                    importedForPlaylist.append(song)
+                } catch {
+                    print("Import file failed: \(error)")
+                }
+            }
+
+            await MainActor.run {
+                // Add all songs to library
+                self.importedSongs.append(contentsOf: importedForPlaylist)
+                self.saveImportedSongs()
+
+                // Create a playlist from the folder
+                let playlist = Playlist(
+                    id: UUID().uuidString,
+                    name: folderName,
+                    description: "\(importedForPlaylist.count) songs imported",
+                    artworkName: "playlist_\(folderName.lowercased())",
+                    songs: importedForPlaylist
+                )
+                self.playlists.append(playlist)
+                self.savePlaylists()
+                HapticService.success()
+            }
         }
     }
 

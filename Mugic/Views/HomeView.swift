@@ -239,6 +239,23 @@ struct HomeView: View {
                             }
                             .padding(.trailing, 8)
                         }
+                        .contextMenu {
+                            Button {
+                                player.addToQueue(song)
+                            } label: {
+                                Label("Add to Queue", systemImage: "text.badge.plus")
+                            }
+                            Button {
+                                library.songToAddToPlaylist = song
+                            } label: {
+                                Label("Add to Playlist", systemImage: "music.note.list")
+                            }
+                            Button {
+                                library.toggleFavorite(song)
+                            } label: {
+                                Label("Remove from Favorites", systemImage: "heart.slash")
+                            }
+                        }
                     }
                 }
             }
@@ -248,10 +265,10 @@ struct HomeView: View {
     private func gradientColors(for name: String) -> [Color] {
         let hash = abs(name.hashValue)
         let palettes: [[Color]] = [
-            [Color(hex: "8a4cfc"), Color(hex: "2c2c2d")],
-            [Color(hex: "49339d"), Color(hex: "0e0e0f")],
-            [Color(hex: "701455"), Color(hex: "1a191b")],
-            [Color(hex: "3c0089"), Color(hex: "131314")],
+            [Color(hex: "e05549"), Color(hex: "2c2c2d")],
+            [Color(hex: "7a4220"), Color(hex: "0e0e0f")],
+            [Color(hex: "5c1a1a"), Color(hex: "1a191b")],
+            [Color(hex: "3b0000"), Color(hex: "131314")],
         ]
         return palettes[hash % palettes.count]
     }

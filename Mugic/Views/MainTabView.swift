@@ -117,23 +117,37 @@ struct MainTabView: View {
                 print("Import error: \(error)")
             }
         }
+        .fileImporter(
+            isPresented: Binding(
+                get: { library.showImportFolder },
+                set: { library.showImportFolder = $0 }
+            ),
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let folderURL = urls.first {
+                    library.importFolder(from: folderURL)
+                }
+            case .failure(let error):
+                print("Folder import error: \(error)")
+            }
+        }
     }
 
     // MARK: - Top Bar Logo
     private var topBarLeading: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(Color.sonicSurfaceVariant)
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.sonicOnSurface)
                 .frame(width: 32, height: 32)
                 .overlay(
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.sonicOnSurfaceVariant)
+                    MugicLogo(size: 18, color: Color.sonicPrimary)
                 )
 
-            Text("Sonic")
+            Text("Mugic")
                 .font(.system(size: 24, weight: .black, design: .rounded))
-                .italic()
                 .foregroundStyle(Color.sonicIndigo400)
         }
     }
@@ -189,30 +203,66 @@ struct MainTabView: View {
                     .padding(.horizontal, 24)
 
                     // Import music button
-                    Button {
-                        library.showImportMusic = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "square.and.arrow.down")
-                                .font(.system(size: 16))
-                            Text("Import Music")
-                                .font(.system(size: 16, weight: .bold))
+                    HStack(spacing: 12) {
+                        Button {
+                            library.showImportMusic = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.badge.plus")
+                                    .font(.system(size: 16))
+                                Text("Import Songs")
+                                    .font(.system(size: 14, weight: .bold))
+                            }
+                            .foregroundStyle(.sonicOnPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.sonicPrimary)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
-                        .foregroundStyle(.sonicOnPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.sonicPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                        Button {
+                            library.showImportFolder = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "folder.badge.plus")
+                                    .font(.system(size: 16))
+                                Text("Import Folder")
+                                    .font(.system(size: 14, weight: .bold))
+                            }
+                            .foregroundStyle(.sonicOnPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.sonicSecondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
                     }
                     .padding(.horizontal, 24)
 
                     // Imported songs
                     if !library.importedSongs.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Imported Songs")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.sonicOnSurface)
-                                .padding(.horizontal, 24)
+                            HStack {
+                                Text("Imported Songs (\(library.importedSongs.count))")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(.sonicOnSurface)
+
+                                Spacer()
+
+                                if library.importedSongs.count > 1 {
+                                    Button {
+                                        player.playPlaylist(library.importedSongs)
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "play.fill")
+                                                .font(.system(size: 12))
+                                            Text("Play All")
+                                                .font(.system(size: 14, weight: .semibold))
+                                        }
+                                        .foregroundStyle(Color.sonicPrimary)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 24)
 
                             LazyVStack(spacing: 4) {
                                 ForEach(library.importedSongs) { song in
@@ -220,12 +270,38 @@ struct MainTabView: View {
                                         player.playSong(song)
                                     }
                                     .padding(.horizontal, 16)
+                                    .contextMenu {
+                                        Button {
+                                            player.addToQueue(song)
+                                        } label: {
+                                            Label("Add to Queue", systemImage: "text.badge.plus")
+                                        }
+                                        Button {
+                                            library.songToAddToPlaylist = song
+                                        } label: {
+                                            Label("Add to Playlist", systemImage: "music.note.list")
+                                        }
+                                        Button {
+                                            library.toggleFavorite(song)
+                                        } label: {
+                                            Label(
+                                                library.isFavorite(song) ? "Remove from Favorites" : "Add to Favorites",
+                                                systemImage: library.isFavorite(song) ? "heart.slash" : "heart"
+                                            )
+                                        }
+                                        Divider()
+                                        Button(role: .destructive) {
+                                            library.deleteImportedSong(song)
+                                        } label: {
+                                            Label("Delete Song", systemImage: "trash")
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                .padding(.bottom, 120)
+                .padding(.bottom, 180)
             }
         }
         .background(Color.sonicBackground)

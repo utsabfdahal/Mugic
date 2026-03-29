@@ -317,3 +317,8 @@ struct PlaylistTrackRow: View {
         .buttonStyle(.plain)
     }
 }
+#Preview {
+    NowPlayingView()
+        .environment(PlayerViewModel())
+        .environment(LibraryViewModel())
+}

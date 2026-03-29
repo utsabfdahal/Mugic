@@ -40,19 +40,19 @@ extension ShapeStyle where Self == Color {
     static var sonicSurfaceBright: Color { Color(light: Color(hex: "f9f9f9"), dark: Color(hex: "2c2c2d")) }
 
     // Primary
-    static var sonicPrimary: Color { Color(light: Color(hex: "4648d4"), dark: Color(hex: "bd9dff")) }
-    static var sonicPrimaryDim: Color { Color(light: Color(hex: "4648d4"), dark: Color(hex: "8a4cfc")) }
-    static var sonicPrimaryContainer: Color { Color(light: Color(hex: "6063ee"), dark: Color(hex: "b28cff")) }
+    static var sonicPrimary: Color { Color(light: Color(hex: "c43e3e"), dark: Color(hex: "ff8a80")) }
+    static var sonicPrimaryDim: Color { Color(light: Color(hex: "c43e3e"), dark: Color(hex: "e05549")) }
+    static var sonicPrimaryContainer: Color { Color(light: Color(hex: "d65a5a"), dark: Color(hex: "ff6e6e")) }
     static var sonicOnPrimary: Color { Color(light: .white, dark: .black) }
-    static var sonicOnPrimaryFixed: Color { Color(light: Color(hex: "07006c"), dark: .black) }
+    static var sonicOnPrimaryFixed: Color { Color(light: Color(hex: "3b0000"), dark: .black) }
 
     // Secondary
-    static var sonicSecondary: Color { Color(light: Color(hex: "575992"), dark: Color(hex: "a28efc")) }
-    static var sonicSecondaryContainer: Color { Color(light: Color(hex: "bdbefe"), dark: Color(hex: "49339d")) }
+    static var sonicSecondary: Color { Color(light: Color(hex: "8b5e3c"), dark: Color(hex: "e8a97a")) }
+    static var sonicSecondaryContainer: Color { Color(light: Color(hex: "f0c9a8"), dark: Color(hex: "7a4220")) }
 
     // Tertiary
-    static var sonicTertiary: Color { Color(light: Color(hex: "904900"), dark: Color(hex: "ffa5d9")) }
-    static var sonicTertiaryContainer: Color { Color(light: Color(hex: "b55d00"), dark: Color(hex: "ff8ed2")) }
+    static var sonicTertiary: Color { Color(light: Color(hex: "904900"), dark: Color(hex: "ffb74d")) }
+    static var sonicTertiaryContainer: Color { Color(light: Color(hex: "b55d00"), dark: Color(hex: "ffa726")) }
 
     // On-surface
     static var sonicOnSurface: Color { Color(light: Color(hex: "1a1c1c"), dark: .white) }
@@ -65,9 +65,9 @@ extension ShapeStyle where Self == Color {
     // Error
     static var sonicError: Color { Color(light: Color(hex: "ba1a1a"), dark: Color(hex: "ff6e84")) }
 
-    // Indigo accents (brand)
-    static var sonicIndigo400: Color { Color(light: Color(hex: "4648d4"), dark: Color(hex: "818cf8")) }
-    static var sonicIndigo500: Color { Color(light: Color(hex: "4648d4"), dark: Color(hex: "6366f1")) }
+    // Indigo accents (brand) → now warm red/amber
+    static var sonicIndigo400: Color { Color(light: Color(hex: "c43e3e"), dark: Color(hex: "ff8a80")) }
+    static var sonicIndigo500: Color { Color(light: Color(hex: "c43e3e"), dark: Color(hex: "e05549")) }
 
     // Glass tint for tab bar / mini player
     static var sonicGlassTint: Color { Color(light: .white, dark: Color(hex: "171717")) }
@@ -77,7 +77,7 @@ extension ShapeStyle where Self == Color {
 extension Color {
     static var sonicPrimaryGradient: LinearGradient {
         LinearGradient(
-            colors: [.sonicPrimary, .sonicPrimaryContainer],
+            colors: [.sonicPrimary, .sonicPrimaryDim],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )

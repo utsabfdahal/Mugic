@@ -433,7 +433,7 @@ final class PlayerViewModel {
                 pushType: nil
             )
         } catch {
-            print("Live Activity error: \(error)")
+            // Silently ignore – Live Activities may not be supported on all devices
         }
     }
 
